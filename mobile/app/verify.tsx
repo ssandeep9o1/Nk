@@ -1,63 +1,90 @@
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { useAuthStore } from '../lib/store';
-import { useMutation } from '@tanstack/react-query';
-import { api } from '../lib/api';
+import { ArrowRight, Loader2, ArrowLeft } from 'lucide-react-native';
 
-export default function Verify() {
+export default function VerifyScreen() {
     const router = useRouter();
     const mobile = useAuthStore((state) => state.mobile);
     const login = useAuthStore((state) => state.login);
     const [otp, setOtp] = useState("");
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState("");
 
-    const { mutate: verifyOtp, isPending } = useMutation({
-        mutationFn: (code: string) => api.auth.verifyOtp(mobile!, code),
-        onSuccess: () => {
-            login({ name: "User", shopName: "My Shop", language: "en" });
-            router.push("/onboarding");
-        },
-        onError: () => {
-            alert("Invalid OTP");
+    const handleVerify = async () => {
+        if (otp.length !== 4) {
+            setError("Enter valid 4-digit OTP");
+            return;
         }
-    });
+
+        setIsLoading(true);
+        setError("");
+
+        // Mock verification
+        setTimeout(() => {
+            if (otp === "1234") {
+                login({
+                    id: "1",
+                    name: "Rahul",
+                    mobile: mobile,
+                    shopName: "Rahul General Store"
+                });
+                router.replace("/dashboard");
+            } else {
+                setError("Invalid OTP. Try 1234");
+                setIsLoading(false);
+            }
+        }, 1000);
+    };
 
     return (
-        <View className="flex-1 items-center justify-center bg-background px-6">
-            <View className="w-full max-w-sm">
-                <View className="items-center mb-8">
-                    <Text className="text-3xl font-bold text-foreground">Verify & Log In</Text>
-                    <Text className="mt-2 text-sm text-gray-500">
-                        Enter the 4-digit code sent to {mobile}
-                    </Text>
-                </View>
+        <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            className="flex-1 bg-white px-6 pt-12"
+        >
+            <TouchableOpacity onPress={() => router.back()} className="mb-8 w-10 h-10 bg-gray-100 rounded-full items-center justify-center">
+                <ArrowLeft color="#374151" size={20} />
+            </TouchableOpacity>
 
-                <View className="space-y-6 w-full">
-                    {/* Simple OTP Input using standard Input for now. 
-              Ideally we'd build a 4-box input, but standard input is fine for MVP. */}
-                    <Input
-                        className="text-center tracking-widest text-2xl"
-                        placeholder="0000"
-                        keyboardType="number-pad"
-                        maxLength={4}
-                        value={otp}
-                        onChangeText={setOtp}
-                    />
-
-                    <Button
-                        title={isPending ? "Verifying..." : "Verify"}
-                        onPress={() => verifyOtp(otp)}
-                        disabled={isPending || otp.length < 4}
-                        className="mt-4"
-                    />
-
-                    <TouchableOpacity onPress={() => alert("Resend Code")}>
-                        <Text className="text-center text-blue-600 font-medium mt-4">Resend Code</Text>
-                    </TouchableOpacity>
-                </View>
+            <View>
+                <Text className="text-3xl font-bold text-gray-900">Verify OTP</Text>
+                <Text className="text-gray-500 mt-2">
+                    We sent a code to <Text className="font-bold text-gray-900">+91 {mobile}</Text>
+                </Text>
             </View>
-        </View>
+
+            <View className="mt-10 space-y-6">
+                <Input
+                    placeholder="0 0 0 0"
+                    keyboardType="number-pad"
+                    maxLength={4}
+                    value={otp}
+                    onChangeText={setOtp}
+                    className="text-center text-3xl tracking-[10px] font-bold h-16 border-b-2 border-gray-200 bg-transparent rounded-none border-t-0 border-x-0 focus:border-black"
+                />
+                {error ? <Text className="text-red-500 text-center">{error}</Text> : null}
+
+                <TouchableOpacity
+                    onPress={handleVerify}
+                    disabled={isLoading}
+                    className="bg-black py-4 rounded-xl items-center flex-row justify-center gap-2 mt-4"
+                >
+                    {isLoading ? (
+                        <Loader2 color="white" size={20} className="animate-spin" />
+                    ) : (
+                        <>
+                            <Text className="text-white font-bold text-lg">Verify & Login</Text>
+                            <ArrowRight color="white" size={20} />
+                        </>
+                    )}
+                </TouchableOpacity>
+
+                <TouchableOpacity>
+                    <Text className="text-center text-gray-500 font-medium mt-4">Resend Code in 30s</Text>
+                </TouchableOpacity>
+            </View>
+        </KeyboardAvoidingView>
     );
 }
